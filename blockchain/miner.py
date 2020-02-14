@@ -1,6 +1,6 @@
 import hashlib
 import requests
-
+import json
 import sys
 
 from uuid import uuid4
@@ -20,13 +20,21 @@ def proof_of_work(last_proof):
     - Use the same method to generate SHA-256 hashes as the examples in class
     """
 
-    start = timer()
+    #start = timer()
 
     print("Searching for next proof")
-    proof = 0
+    proof = random.getrandbits(256)
+    count = 0
     #  TODO: Your code here
-
-    print("Proof found: " + str(proof) + " in " + str(timer() - start))
+    last_string = f'{last_proof}'.encode()
+    last_hash = hashlib.sha256(last_string).hexdigest()
+    while valid_proof(last_hash, proof) is False:
+        proof = random.getrandbits(256)
+        count +=1
+        if count> 3000000:
+            return 'restart'
+    #print("Proof found: " + str(proof) + ' ' + str(count) + " in " + str(
+    # timer() - start))
     return proof
 
 
@@ -35,12 +43,12 @@ def valid_proof(last_hash, proof):
     Validates the Proof:  Multi-ouroborus:  Do the last six characters of
     the hash of the last proof match the first six characters of the hash
     of the new proof?
-
     IE:  last_hash: ...AE9123456, new hash 123456E88...
     """
 
-    # TODO: Your code here!
-    pass
+    guess_string = f'{proof}'.encode()
+    guess_hash = hashlib.sha256(guess_string).hexdigest()
+    return last_hash[-6:] == guess_hash[:6]
 
 
 if __name__ == '__main__':
@@ -67,7 +75,8 @@ if __name__ == '__main__':
         r = requests.get(url=node + "/last_proof")
         data = r.json()
         new_proof = proof_of_work(data.get('proof'))
-
+        if new_proof == 'restart':
+            continue
         post_data = {"proof": new_proof,
                      "id": id}
 
